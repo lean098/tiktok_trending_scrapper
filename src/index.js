@@ -1,8 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
+const chromium = require("chrome-aws-lambda");
 
 const Xvfb = require("xvfb");
 
@@ -103,8 +102,9 @@ app.get("/trending", async (req, res) => {
     const options = process.env.AWS_REGION
       ? {
           args: [...chromium.args, customArgs.join(", ")],
-          executablePath: await chromium.executablePath(),
-          headless: true,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath,
+          headless: chromium.headless,
           ignoreHTTPSErrors: true,
         }
       : {
@@ -119,7 +119,7 @@ app.get("/trending", async (req, res) => {
           headless: false,
         };
 
-    browser = await puppeteer.launch(options);
+    browser = await chromium.puppeteer.launch(options);
 
     const page = await browser.newPage();
 
