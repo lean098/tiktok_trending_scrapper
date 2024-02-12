@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium-min";
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium-min");
 
 const Xvfb = require("xvfb");
 
