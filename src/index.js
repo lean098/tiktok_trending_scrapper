@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
-const chromium = require("chrome-aws-lambda");
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium-min";
 
 const Xvfb = require("xvfb");
 
@@ -102,9 +103,10 @@ app.get("/trending", async (req, res) => {
     const options = process.env.AWS_REGION
       ? {
           args: [...chromium.args, customArgs.join(", ")],
-          defaultViewport: chromium.defaultViewport,
-          executablePath: await chromium.executablePath,
-          headless: chromium.headless,
+          executablePath: await chromium.executablePath(
+            "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
+          ),
+          headless: true,
           ignoreHTTPSErrors: true,
         }
       : {
@@ -119,7 +121,7 @@ app.get("/trending", async (req, res) => {
           headless: false,
         };
 
-    browser = await chromium.puppeteer.launch(options);
+    browser = await puppeteer.launch(options);
 
     const page = await browser.newPage();
 
