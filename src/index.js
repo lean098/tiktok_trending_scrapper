@@ -4,6 +4,8 @@ const cors = require("cors");
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium-min");
 
+const Xvfb = require("xvfb");
+
 const { load } = require("cheerio");
 
 const wait = (ms) =>
@@ -76,10 +78,31 @@ app.get("/trending", async (req, res) => {
     const url = `https://www.tiktok.com/discover/trending?lang=${lng}`;
 
     let browser = null;
+    let xvfb = null;
+    let customArgs = [];
+
+    const isProd = process.env.NODE_ENV === "production";
+
+    if (isProd) {
+      xvfb = new Xvfb({
+        silent: true,
+        xvfb_args: ["-screen", "0", "1280x720x24", "-ac"],
+      });
+
+      customArgs.push(
+        "--no-sandbox",
+        "--start-fullscreen",
+        "--display=" + xvfb._display
+      );
+
+      xvfb.start((err) => {
+        if (err) console.error(err);
+      });
+    }
 
     const options = process.env.AWS_REGION
       ? {
-          args: chromium.args,
+          args: [...chromium.args, customArgs.join(", ")],
           executablePath: await chromium.executablePath(
             "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
           ),
@@ -275,6 +298,7 @@ app.get("/trending", async (req, res) => {
     } finally {
       if (browser !== null) {
         await browser.close();
+        if (isProd) xvfb.stop();
       }
     }
   } catch (error) {
