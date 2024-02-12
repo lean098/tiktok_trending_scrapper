@@ -1,57 +1,70 @@
-import express from "express";
-import cors from "cors";
+const express = require("express");
+const cors = require("cors");
 
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium-min";
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium-min");
 
-import { scrollPageToBottom } from "puppeteer-autoscroll-down";
+const { load } = require("cheerio");
 
-import { load } from "cheerio";
-
-import { wait } from "./helpers/wait.js";
+const wait = (ms) =>
+  new Promise((resolve) => setTimeout(() => resolve("OK!"), ms));
 
 const app = express();
 
-type Videos = {
-  video: string;
-  thumbnail: string;
-  views: string;
-  like: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-};
-
-type Users = {
-  link: string;
-  thumbnail: string;
-  title: string;
-  description: string;
-  followers: string;
-};
-
-type Hashtags = {
-  link: string;
-  name: string;
-  views: string;
-};
-
-type Musics = {
-  link: string;
-  thumbnail: string;
-  name: string;
-  author: string;
-  duration: string;
-};
-
-type Topics = {
-  link: string;
-  name: string;
-};
-
 app.use(express.json());
 app.use(cors());
+
+function scrollPageToBottom(scrollDirection) {
+  return async (page, { delay = 100, size = 250, stepsLimit = null } = {}) => {
+    let lastScrollPosition = await page.evaluate(
+      async (pixelsToScroll, delayAfterStep, limit, direction) => {
+        let getElementScrollHeight = (element) => {
+          if (!element) return 0;
+          let { clientHeight, offsetHeight, scrollHeight } = element;
+          return Math.max(scrollHeight, offsetHeight, clientHeight);
+        };
+
+        let initialScrollPosition = window.pageYOffset;
+        let availableScrollHeight = getElementScrollHeight(document.body);
+        let lastPosition = direction === "bottom" ? 0 : initialScrollPosition;
+
+        let scrollFn = (resolve) => {
+          let intervalId = setInterval(() => {
+            window.scrollBy(
+              0,
+              direction === "bottom" ? pixelsToScroll : -pixelsToScroll
+            );
+            lastPosition +=
+              direction === "bottom" ? pixelsToScroll : -pixelsToScroll;
+
+            if (
+              (direction === "bottom" &&
+                lastPosition >= availableScrollHeight) ||
+              (direction === "bottom" &&
+                limit !== null &&
+                lastPosition >= pixelsToScroll * limit) ||
+              (direction === "top" && lastPosition <= 0) ||
+              (direction === "top" &&
+                limit !== null &&
+                lastPosition <= initialScrollPosition - pixelsToScroll * limit)
+            ) {
+              clearInterval(intervalId);
+              resolve(lastPosition);
+            }
+          }, delayAfterStep);
+        };
+
+        return new Promise(scrollFn);
+      },
+      size,
+      delay,
+      stepsLimit,
+      scrollDirection
+    );
+
+    return lastScrollPosition;
+  };
+}
 
 app.get("/", (_, res) => {
   res.status(500).json({ error: "Internal server error" });
@@ -61,10 +74,6 @@ app.get("/trending", async (req, res) => {
   try {
     const { lng = "pt-BR" } = req.query;
     const url = `https://www.tiktok.com/discover/trending?lang=${lng}`;
-
-    console.log({
-      lng,
-    });
 
     let browser = null;
 
@@ -94,7 +103,7 @@ app.get("/trending", async (req, res) => {
     const page = await browser.newPage();
 
     try {
-      await page.goto(url as string, {
+      await page.goto(url, {
         waitUntil: "domcontentloaded",
       });
 
@@ -102,7 +111,7 @@ app.get("/trending", async (req, res) => {
 
       for await (const t of times) {
         await wait(150).finally(async () => {
-          await scrollPageToBottom(page, {
+          await scrollPageToBottom("bottom")(page, {
             size: 1000,
             delay: 150,
           });
@@ -115,7 +124,7 @@ app.get("/trending", async (req, res) => {
 
       const mainContent = $("#main-content-discover_kw");
 
-      const videos: Array<Videos> = [];
+      const videos = [];
 
       // Videos
       $(mainContent)
@@ -147,7 +156,7 @@ app.get("/trending", async (req, res) => {
           });
         });
 
-      const users: Array<Users> = [];
+      const users = [];
 
       // Users
       const usersList = $(mainContent)
@@ -179,7 +188,7 @@ app.get("/trending", async (req, res) => {
         });
       });
 
-      const musics: Array<Musics> = [];
+      const musics = [];
 
       // Music
       const musicsList = $(mainContent)
@@ -203,7 +212,7 @@ app.get("/trending", async (req, res) => {
         });
       });
 
-      const hashtags: Array<Hashtags> = [];
+      const hashtags = [];
 
       // Hashtags
       const hashtagsList = $(mainContent)
@@ -229,7 +238,7 @@ app.get("/trending", async (req, res) => {
         });
       });
 
-      const topics: Array<Topics> = [];
+      const topics = [];
 
       // Topics
       const topicsList = $(mainContent)
