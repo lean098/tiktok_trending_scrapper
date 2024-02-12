@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 
 const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium-min");
+const chromium = require("@sparticuz/chromium");
 
 const Xvfb = require("xvfb");
 
@@ -100,11 +100,10 @@ app.get("/trending", async (req, res) => {
       });
     }
 
-    // https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar
     const options = process.env.AWS_REGION
       ? {
           args: [...chromium.args, customArgs.join(", ")],
-          executablePath: await chromium.executablePath("/opt/chromium"),
+          executablePath: await chromium.executablePath(),
           headless: true,
           ignoreHTTPSErrors: true,
         }
