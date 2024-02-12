@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "build": "npm install",
+    "build": "npm install && node node_modules/puppeteer-core/install.js",
     "dev": "nodemon -w ./src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
