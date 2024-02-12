@@ -100,12 +100,11 @@ app.get("/trending", async (req, res) => {
       });
     }
 
+    // https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar
     const options = process.env.AWS_REGION
       ? {
           args: [...chromium.args, customArgs.join(", ")],
-          executablePath: await chromium.executablePath(
-            "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
-          ),
+          executablePath: await chromium.executablePath("/opt/chromium"),
           headless: true,
           ignoreHTTPSErrors: true,
         }

@@ -11,9 +11,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "@sparticuz/chromium-min": "^115.0.0",
     "axios": "^1.6.7",
