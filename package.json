@@ -13,12 +13,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium-min": "^121.0.0",
+    "@sparticuz/chromium": "^121.0.0",
     "axios": "^1.6.7",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "puppeteer-core": "10.1.0",
+    "playwright-core": "^1.41.2",
     "xvfb": "^0.4.0"
   },
   "devDependencies": {
