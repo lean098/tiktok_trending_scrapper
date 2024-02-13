@@ -68,11 +68,7 @@ function scrollPageToBottom(scrollDirection) {
   };
 }
 
-app.get("/", (_, res) => {
-  res.status(500).json({ error: "Internal server error" });
-});
-
-app.get("/trending", async (req, res) => {
+app.get("/", async (req, res) => {
   try {
     const { lng = "pt-BR" } = req.query;
     const url = `https://www.tiktok.com/discover/trending?lang=${lng}`;
