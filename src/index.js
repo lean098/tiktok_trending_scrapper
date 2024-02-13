@@ -1,72 +1,72 @@
 const express = require("express");
 const cors = require("cors");
 
-const { chromium: playwright } = require("playwright-core");
-const chromium = require("@sparticuz/chromium");
-
-// const Xvfb = require("xvfb");
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium-min");
 
 const { load } = require("cheerio");
 
-// const wait = (ms) =>
-//   new Promise((resolve) => setTimeout(() => resolve("OK!"), ms));
+const wait = (ms) =>
+  new Promise((resolve) => setTimeout(() => resolve("OK!"), ms));
 
 const app = express();
+
+let browserWSEndpoint = null;
 
 app.use(express.json());
 app.use(cors());
 
-// function scrollPageToBottom(scrollDirection) {
-//   return async (page, { delay = 100, size = 250, stepsLimit = null } = {}) => {
-//     let lastScrollPosition = await page.evaluate(
-//       async (pixelsToScroll, delayAfterStep, limit, direction) => {
-//         let getElementScrollHeight = (element) => {
-//           if (!element) return 0;
-//           let { clientHeight, offsetHeight, scrollHeight } = element;
-//           return Math.max(scrollHeight, offsetHeight, clientHeight);
-//         };
+function scrollPageToBottom(scrollDirection) {
+  return async (page, { delay = 100, size = 250, stepsLimit = null } = {}) => {
+    let lastScrollPosition = await page.evaluate(
+      async (pixelsToScroll, delayAfterStep, limit, direction) => {
+        let getElementScrollHeight = (element) => {
+          if (!element) return 0;
+          let { clientHeight, offsetHeight, scrollHeight } = element;
+          return Math.max(scrollHeight, offsetHeight, clientHeight);
+        };
 
-//         let initialScrollPosition = window.pageYOffset;
-//         let availableScrollHeight = getElementScrollHeight(document.body);
-//         let lastPosition = direction === "bottom" ? 0 : initialScrollPosition;
+        let initialScrollPosition = window.pageYOffset;
+        let availableScrollHeight = getElementScrollHeight(document.body);
+        let lastPosition = direction === "bottom" ? 0 : initialScrollPosition;
 
-//         let scrollFn = (resolve) => {
-//           let intervalId = setInterval(() => {
-//             window.scrollBy(
-//               0,
-//               direction === "bottom" ? pixelsToScroll : -pixelsToScroll
-//             );
-//             lastPosition +=
-//               direction === "bottom" ? pixelsToScroll : -pixelsToScroll;
+        let scrollFn = (resolve) => {
+          let intervalId = setInterval(() => {
+            window.scrollBy(
+              0,
+              direction === "bottom" ? pixelsToScroll : -pixelsToScroll
+            );
+            lastPosition +=
+              direction === "bottom" ? pixelsToScroll : -pixelsToScroll;
 
-//             if (
-//               (direction === "bottom" &&
-//                 lastPosition >= availableScrollHeight) ||
-//               (direction === "bottom" &&
-//                 limit !== null &&
-//                 lastPosition >= pixelsToScroll * limit) ||
-//               (direction === "top" && lastPosition <= 0) ||
-//               (direction === "top" &&
-//                 limit !== null &&
-//                 lastPosition <= initialScrollPosition - pixelsToScroll * limit)
-//             ) {
-//               clearInterval(intervalId);
-//               resolve(lastPosition);
-//             }
-//           }, delayAfterStep);
-//         };
+            if (
+              (direction === "bottom" &&
+                lastPosition >= availableScrollHeight) ||
+              (direction === "bottom" &&
+                limit !== null &&
+                lastPosition >= pixelsToScroll * limit) ||
+              (direction === "top" && lastPosition <= 0) ||
+              (direction === "top" &&
+                limit !== null &&
+                lastPosition <= initialScrollPosition - pixelsToScroll * limit)
+            ) {
+              clearInterval(intervalId);
+              resolve(lastPosition);
+            }
+          }, delayAfterStep);
+        };
 
-//         return new Promise(scrollFn);
-//       },
-//       size,
-//       delay,
-//       stepsLimit,
-//       scrollDirection
-//     );
+        return new Promise(scrollFn);
+      },
+      size,
+      delay,
+      stepsLimit,
+      scrollDirection
+    );
 
-//     return lastScrollPosition;
-//   };
-// }
+    return lastScrollPosition;
+  };
+}
 
 app.get("/", (_, res) => {
   res.status(500).json({ error: "Internal server error" });
@@ -78,76 +78,54 @@ app.get("/trending", async (req, res) => {
     const url = `https://www.tiktok.com/discover/trending?lang=${lng}`;
 
     let browser = null;
-    // let xvfb = null;
-    // let customArgs = [];
 
-    // const isProd = process.env.NODE_ENV === "production";
+    const options = process.env.AWS_REGION
+      ? {
+          args: chromium.args,
+          executablePath: await chromium.executablePath(
+            "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
+          ),
+          headless: true,
+          ignoreHTTPSErrors: true,
+        }
+      : {
+          defaultViewport: null,
+          args: ["--start-maximized"],
+          executablePath:
+            process.platform === "win32"
+              ? "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+              : process.platform === "linux"
+              ? "/usr/bin/google-chrome"
+              : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          headless: false,
+        };
 
-    // if (isProd) {
-    //   xvfb = new Xvfb({
-    //     silent: true,
-    //     xvfb_args: ["-screen", "0", "1280x720x24", "-ac"],
-    //   });
+    if (browserWSEndpoint) {
+      browser = await puppeteer.connect(browserWSEndpoint);
+    }
 
-    //   customArgs.push(
-    //     "--no-sandbox",
-    //     "--start-fullscreen",
-    //     "--display=" + xvfb._display
-    //   );
+    if (!browser || !browser.connected) {
+      browser = await puppeteer.launch(options);
+      browserWSEndpoint = browser.wsEndpoint();
+    }
 
-    //   xvfb.start((err) => {
-    //     if (err) console.error(err);
-    //   });
-    // }
-
-    // const options = process.env.AWS_REGION
-    //   ? {
-    //       args: [...chromium.args, customArgs.join(", ")],
-    //       executablePath: await chromium.executablePath(
-    //         "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
-    //       ),
-    //       headless: true,
-    //       ignoreHTTPSErrors: true,
-    //     }
-    //   : {
-    //       defaultViewport: null,
-    //       args: ["--start-maximized"],
-    //       executablePath:
-    //         process.platform === "win32"
-    //           ? "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    //           : process.platform === "linux"
-    //           ? "/usr/bin/google-chrome"
-    //           : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    //       headless: false,
-    //     };
-
-    // browser = await puppeteer.launch(options);
-
-    browser = await playwright.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: false,
-    });
-
-    const context = await browser.newContext();
-
-    const page = await context.newPage();
+    const page = await browser.newPage();
 
     try {
       await page.goto(url, {
         waitUntil: "domcontentloaded",
       });
 
-      // const times = [1, 2, 3, 4, 5];
+      const times = [1, 2, 3, 4, 5];
 
-      // for await (const t of times) {
-      //   await wait(150).finally(async () => {
-      //     await scrollPageToBottom("bottom")(page, {
-      //       size: 1000,
-      //       delay: 150,
-      //     });
-      //   });
-      // }
+      for await (const t of times) {
+        await wait(150).finally(async () => {
+          await scrollPageToBottom("bottom")(page, {
+            size: 1000,
+            delay: 150,
+          });
+        });
+      }
 
       const html = await page.content();
 
@@ -302,11 +280,11 @@ app.get("/trending", async (req, res) => {
     } catch (error) {
       return res
         .status(500)
-        .json({ error: "get data from api error", data: {} });
+        .json({ error: "get data from api error", link: "" });
     } finally {
       if (browser !== null) {
         await browser.close();
-        // if (isProd) xvfb.stop();
+        await browser.disconnect();
       }
     }
   } catch (error) {
