@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const PCR = require("puppeteer-chromium-resolver");
+
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium-min");
 
@@ -100,8 +102,14 @@ app.get("/", async (req, res) => {
       browser = await puppeteer.connect(browserWSEndpoint);
     }
 
+    const stats = await PCR(options);
+
     if (!browser || !browser.connected) {
-      browser = await puppeteer.launch(options);
+      browser = await stats.puppeteer.launch({
+        headless: false,
+        args: ["--no-sandbox"],
+        executablePath: stats.executablePath,
+      });
       browserWSEndpoint = browser.wsEndpoint();
     }
 
