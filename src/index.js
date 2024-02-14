@@ -2,8 +2,6 @@ const express = require("express");
 const cors = require("cors");
 
 const PCR = require("puppeteer-chromium-resolver");
-
-const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium-min");
 
 const { load } = require("cheerio");
@@ -13,7 +11,7 @@ const wait = (ms) =>
 
 const app = express();
 
-let browserWSEndpoint = null;
+// let browserWSEndpoint = null;
 
 app.use(express.json());
 app.use(cors());
@@ -98,20 +96,26 @@ app.get("/", async (req, res) => {
           headless: false,
         };
 
-    if (browserWSEndpoint) {
-      browser = await puppeteer.connect(browserWSEndpoint);
-    }
-
     const stats = await PCR(options);
 
-    if (!browser || !browser.connected) {
-      browser = await stats.puppeteer.launch({
-        headless: false,
-        args: ["--no-sandbox"],
-        executablePath: stats.executablePath,
-      });
-      browserWSEndpoint = browser.wsEndpoint();
-    }
+    // if (browserWSEndpoint) {
+    //   browser = await stats.puppeteer.connect(browserWSEndpoint);
+    // }
+
+    // if (!browser || !browser.connected) {
+    //   browser = await stats.puppeteer.launch({
+    //     headless: false,
+    //     args: ["--no-sandbox"],
+    //     executablePath: stats.executablePath,
+    //   });
+    //   browserWSEndpoint = browser.wsEndpoint();
+    // }
+
+    browser = await stats.puppeteer.launch({
+      headless: false,
+      args: ["--no-sandbox"],
+      executablePath: stats.executablePath,
+    });
 
     const page = await browser.newPage();
 
